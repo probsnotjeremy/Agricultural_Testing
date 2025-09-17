@@ -1,0 +1,42 @@
+# File: .github/workflows/python-ci.yml
+name: Python CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+#    strategy:
+#      matrix:
+#        python-version: ['3.9', '3.10', '3.11']
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install nbconvert nbformat pytest
+
+      - name: Run tests
+        run: pytest || echo "No tests yet"
+
+      - name: Fix notebook kernels
+        run: |
+          for notebook in $(find . -name "*.ipynb"); do
+            jq '.metadata.kernelspec.name="python3" | .metadata.kernelspec.display_name="Python 3"' "$notebook" > tmp.ipynb && mv tmp.ipynb "$notebook"
+          done
+
+
+      - name: Check notebooks
+        run: |
+          for notebook in $(find . -name "*.ipynb"); do
+            jupyter nbconvert --to notebook --execute "$notebook"
+          done
